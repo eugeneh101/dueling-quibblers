@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Dueling Quibblers - A CLI app for fantasy character debates using LangGraph and AWS Bedrock
+Dueling Quibblers - A CLI app for fantasy character debates using LangGraph and Ollama
 """
 
 import operator
@@ -9,8 +9,8 @@ import random
 from typing import Annotated, TypedDict
 
 import typer
+import ollama
 from langchain.schema import HumanMessage
-from langchain_aws import ChatBedrock
 from langgraph.graph import END, StateGraph
 from pydantic import BaseModel, Field
 from rich.console import Console
@@ -45,10 +45,7 @@ class DebateManager:
     """Manages the debate flow and character interactions"""
 
     def __init__(self):
-        self.llm = ChatBedrock(
-            model_id="anthropic.claude-3-5-sonnet-20240620-v1:0",
-            region_name="us-east-1",
-        )  # hard coded
+        self.model_name = "llama3.1:8b"  # Using the model we pulled
         self.character_personalities = {  # Character personality templates
             "harry potter": {
                 "style": "Brave, determined, speaks with conviction about justice and doing what's right. Uses phrases like 'I believe', 'We must', 'It's our duty'.",
@@ -225,8 +222,8 @@ Speak now as {speaker}:"""
     def generate_debate_response(self, state: DebateState, speaker: str) -> str:
         """Generate a debate response for the current speaker"""
         prompt = self.create_debate_prompt(state=state, speaker=speaker)
-        response = self.llm.invoke([HumanMessage(content=prompt)])
-        return response.content
+        response = ollama.chat(model=self.model_name, messages=[{'role': 'user', 'content': prompt}])
+        return response['message']['content']
 
     def debater1_speaks(self, state: DebateState) -> DebateState:
         """Debater 1 presents their argument"""
@@ -340,10 +337,25 @@ Deliver your judgment as {state["judge"]}:"""
     def generate_judgment(self, state: DebateState) -> JudgeVerdict:
         """Generate the judge's verdict"""
         prompt = self.create_judgment_prompt(state=state)
-        response = self.llm.with_structured_output(JudgeVerdict).invoke(
-            [HumanMessage(content=prompt)]
-        )
-        return response
+        response = ollama.chat(model=self.model_name, messages=[{'role': 'user', 'content': prompt}])
+        content = response['message']['content']
+        
+        # Simple parsing to extract winner and explanation
+        # This is a simplified approach - in production you might want more robust parsing
+        lines = content.split('\n')
+        winner = state["debater1"]  # Default
+        explanation = content
+        
+        # Try to find the winner in the response
+        for line in lines:
+            if state["debater1"].lower() in line.lower() and "win" in line.lower():
+                winner = state["debater1"]
+                break
+            elif state["debater2"].lower() in line.lower() and "win" in line.lower():
+                winner = state["debater2"]
+                break
+        
+        return JudgeVerdict(debate_winner=winner, debate_winner_explanation=explanation)
 
     def judge_verdict(self, state: DebateState) -> DebateState:
         """Judge delivers the verdict"""
@@ -396,6 +408,121 @@ Deliver your judgment as {state["judge"]}:"""
         workflow.add_edge("end_of_arguments", "judge_verdict")
         workflow.add_edge("judge_verdict", END)
         return workflow.compile()
+
+
+def run_debate_streamlit(topic: str, debater1: str, debater2: str, judge: str, verbose: bool = False):
+    """
+    Run a 3-round debate between debater1 and debater2 on the given topic, judged by judge.
+    Returns (debate_progress, debate_log, winner, reason):
+      - debate_progress: list of dicts with round info, speaker, and arguments for Streamlit display
+      - debate_log: list of (debater1_speech, debater2_speech) for each round
+      - winner: name of the winning debater
+      - reason: judge's explanation
+    """
+    manager = DebateManager()
+    # Randomly assign positions for consistency with CLI
+    positions = ["affirmative", "negative"]
+    random.shuffle(positions)
+    state = {
+        "topic": topic,
+        "debater1": debater1,
+        "debater2": debater2,
+        "debater1_position": positions[0],
+        "debater2_position": positions[1],
+        "judge": judge,
+        "round_number": 1,
+        "debate_history": [],
+    }
+    
+    debate_log = []
+    debate_progress = []
+    
+    for round_num in range(1, 4):
+        state["round_number"] = round_num
+        
+        # Debater 1 speaks
+        if verbose:
+            console.print(f"\n[bold cyan]:microphone: {state['debater1']} speaks (Round {state['round_number']}):[/bold cyan]\n")
+        
+        d1_response = manager.generate_debate_response(state=state, speaker=state["debater1"])
+        
+        if verbose:
+            console.print(
+                Panel(
+                    d1_response,
+                    title=f"{state['debater1']}",
+                    border_style="cyan",
+                    padding=(1, 2),
+                )
+            )
+        
+        # Add to progress for Streamlit
+        debate_progress.append({
+            "round": round_num,
+            "speaker": state["debater1"],
+            "argument": d1_response,
+            "position": state["debater1_position"]
+        })
+        
+        # Debater 2 speaks
+        if verbose:
+            console.print(f"\n[bold magenta]:microphone: {state['debater2']} speaks (Round {state['round_number']}):[/bold magenta]\n")
+        
+        d2_response = manager.generate_debate_response(state=state, speaker=state["debater2"])
+        
+        if verbose:
+            console.print(
+                Panel(
+                    d2_response,
+                    title=f"{state['debater2']}",
+                    border_style="magenta",
+                    padding=(1, 2),
+                )
+            )
+        
+        # Add to progress for Streamlit
+        debate_progress.append({
+            "round": round_num,
+            "speaker": state["debater2"],
+            "argument": d2_response,
+            "position": state["debater2_position"]
+        })
+        
+        # Add to debate history for judge
+        state["debate_history"].extend([
+            {
+                "speaker": state["debater1"],
+                "argument": d1_response,
+                "round": round_num,
+            },
+            {
+                "speaker": state["debater2"],
+                "argument": d2_response,
+                "round": round_num,
+            }
+        ])
+        
+        debate_log.append((d1_response, d2_response))
+    
+    # End of arguments, get judge verdict
+    if verbose:
+        console.print(f"\n[bold yellow]:scales: {state['judge']} delivers the verdict:[/bold yellow]\n")
+    
+    verdict = manager.generate_judgment(state)
+    winner = verdict.debate_winner
+    reason = verdict.debate_winner_explanation
+    
+    if verbose:
+        console.print(
+            Panel(
+                verdict.debate_winner_explanation,
+                title=f":scales: {state['judge']}'s Verdict",
+                border_style="yellow",
+                padding=(1, 2),
+            )
+        )
+    
+    return debate_progress, debate_log, winner, reason
 
 
 def main():
