@@ -17,6 +17,9 @@
  rich = "^14.0.0"
  python-dotenv = "^1.1.1"
  grandalf = "^0.8"
+ requests = "^2.32.4"
+ streamlit = "^1.47.1"
+ ddgs = "^9.4.3"
  
  [tool.poetry.group.dev.dependencies]
  pytest = "^7.0.0"

@@ -7,7 +7,7 @@ A fun CLI application that creates debates between fantasy characters using Lang
 - Interactive CLI interface for debate setup
 - Fantasy character debaters with unique personalities and speaking styles
 - 3-round debate format with memory of previous arguments
-- Powered by AWS Bedrock (Sonnet 3.7)
+- Powered by AWS Bedrock
 - Built with LangGraph for structured conversation flow
 
 ## Setup

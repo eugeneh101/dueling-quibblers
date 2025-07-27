@@ -1,12 +1,10 @@
-from pathlib import Path
-from ddgs import DDGS
 import requests
 import streamlit as st
-from typing import List, Tuple, Optional
-import logging
+from ddgs import DDGS
 
-# Import from local dueling_quibblers_v2.py since we're in the same repo
-from dueling_quibblers_v2 import run_debate_streamlit
+# Import from local dueling_quibblers_v3.py since we're in the same repo
+from dueling_quibblers_v3 import run_debate_streamlit
+
 
 @st.cache_data(show_spinner=False)
 def get_character_image(name: str) -> tuple[str, str | None]:
@@ -30,15 +28,16 @@ def get_character_image(name: str) -> tuple[str, str | None]:
                 max_results=20,
             ):
                 url = hit["image"]
-                if (  any(tok in url.lower() for tok in bad)
-                     or hit.get("width", 0) < 400):
+                if any(tok in url.lower() for tok in bad) or hit.get("width", 0) < 400:
                     continue
                 return url, None
         except Exception as e:
             st.warning(f"DDGS failed on '{q}': {e}")
 
     # --- Wikipedia fallback ---
-    api = f"https://en.wikipedia.org/api/rest_v1/page/summary/{name.replace(' ', '%20')}"
+    api = (
+        f"https://en.wikipedia.org/api/rest_v1/page/summary/{name.replace(' ', '%20')}"
+    )
     try:
         img = requests.get(api, timeout=5).json().get("thumbnail", {}).get("source")
         if img:
@@ -46,10 +45,15 @@ def get_character_image(name: str) -> tuple[str, str | None]:
     except Exception:
         pass
 
-    return f"https://ui-avatars.com/api/?name={name.replace(' ', '+')}", "Showing placeholder avatar."
+    return (
+        f"https://ui-avatars.com/api/?name={name.replace(' ', '+')}",
+        "Showing placeholder avatar.",
+    )
 
 
-def get_debate_progress(topic: str, debater1: str, debater2: str, judge: str) -> tuple[list, str, str]:
+def get_debate_progress(
+    topic: str, debater1: str, debater2: str, judge: str
+) -> tuple[list, str, str]:
     """
     Get detailed debate progress for Streamlit display.
     Returns (debate_progress, winner, reason):
@@ -57,21 +61,44 @@ def get_debate_progress(topic: str, debater1: str, debater2: str, judge: str) ->
       - winner: name of the winning debater
       - reason: judge's explanation
     """
-    debate_progress, _, winner, reason = run_debate_streamlit(topic, debater1, debater2, judge, verbose=False)
+    debate_progress, _, winner, reason = run_debate_streamlit(
+        topic=topic,
+        debater1=debater1,
+        debater2=debater2,
+        judge=judge,
+        verbose=True,  # hard coded
+    )
     return debate_progress, winner, reason
 
 
-def run_debate(topic: str, debater1: str, debater2: str) -> List[Tuple[str, str]]:
+def run_debate(topic: str, debater1: str, debater2: str) -> list[tuple[str, str]]:
     """
     Run a 3-round debate using advanced logic. Returns a list of (debater1_speech, debater2_speech) tuples.
     """
-    debate_progress, debate_log, _, _ = run_debate_streamlit(topic, debater1, debater2, judge="Sheldon Cooper", verbose=False)
+    debate_progress, debate_log, _, _ = run_debate_streamlit(
+        topic=topic,
+        debater1=debater1,
+        debater2=debater2,
+        judge="Sheldon Cooper",  # take a look
+        verbose=False,  # hard coded
+    )
     return debate_log
 
-def judge_debate(debate_log: List[Tuple[str, str]], debater1: str, debater2: str, judge: str) -> Tuple[str, str]:
+
+def judge_debate(
+    debate_log: list[tuple[str, str]], debater1: str, debater2: str, judge: str
+) -> tuple[str, str]:
     """
     Judge the debate and return (winner, reason) using advanced logic.
     """
     # Re-run the debate to get the winner and reason (since state is not preserved)
-    _, _, winner, reason = run_debate_streamlit("", debater1, debater2, judge, verbose=False)
-    return winner, reason 
+    _, _, winner, reason = run_debate_streamlit(
+        topic="",
+        debater1=debater1,
+        debater2=debater2,
+        judge=judge,
+        verbose=False,  # hard coded
+    )
+    return winner, reason
+
+
