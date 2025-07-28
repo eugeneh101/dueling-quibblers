@@ -7,7 +7,6 @@ import os
 import random
 from typing import Annotated, TypedDict
 
-import typer
 from langchain.schema import HumanMessage
 from langchain_aws import ChatBedrock
 from langgraph.graph import END, StateGraph
@@ -16,7 +15,10 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.prompt import Prompt
 
-AWS_REGION = os.environ["AWS_REGION"]
+AWS_REGION = os.environ.get("AWS_REGION", "us-east-1")
+BEDROCK_MODEL = os.environ.get(
+    "BEDROCK_MODEL", "us.anthropic.claude-3-5-haiku-20241022-v1:0"
+)
 console = Console()  # Initialize Rich console for beautiful output
 
 
@@ -45,10 +47,7 @@ class DebateManager:
     """Manages the debate flow and character interactions"""
 
     def __init__(self):
-        self.llm = ChatBedrock(
-            model_id="anthropic.claude-3-5-sonnet-20240620-v1:0",  # hard coded
-            region_name=AWS_REGION,
-        )
+        self.llm = ChatBedrock(model_id=BEDROCK_MODEL, region_name=AWS_REGION)
         self.character_personalities = {  # Character personality templates
             "harry potter": {
                 "style": "Brave, determined, speaks with conviction about justice and doing what's right. Uses phrases like 'I believe', 'We must', 'It's our duty'.",
@@ -157,7 +156,6 @@ class DebateManager:
         }
 
     def start_debate(self, state: DebateState) -> DebateState:
-        """Initialize the debate"""
         console.print(
             Panel(
                 f"[bold blue]:performing_arts: DUELING QUIBBLERS :performing_arts:[/bold blue]\n\n"
@@ -169,7 +167,7 @@ class DebateManager:
                 border_style="blue",
             )
         )
-        return state
+        return {}
 
     def get_character_personality(self, character_name: str) -> dict[str, str]:
         """Get personality template for a character, with fallback for unknown characters"""
@@ -297,7 +295,7 @@ Speak now as {speaker}:"""
                 border_style="green",
             )
         )
-        return state
+        return {}
 
     def get_judge_personality(self, judge_name: str) -> dict[str, str]:
         """Get personality template for a judge, with fallback for unknown judges"""
@@ -542,4 +540,4 @@ def main():
 
 
 if __name__ == "__main__":
-    typer.run(main)
+    main()

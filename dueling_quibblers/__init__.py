@@ -97,6 +97,9 @@ class EcsService(Construct):
             vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC),
             assign_public_ip=True,  # seems to need to be True if using Public subnet
             enable_execute_command=environment["ECS_ENABLE_EXEC"],
+            capacity_provider_strategies=[
+                ecs.CapacityProviderStrategy(capacity_provider="FARGATE_SPOT", weight=1)
+            ],
             security_groups=[self.security_group],
         )
 
@@ -172,6 +175,7 @@ def handler(event, context):
             f"PushTaskImage{task_definition_name}",
             src=ecr_deploy.DockerImageName(task_asset.image_uri),
             dest=ecr_deploy.DockerImageName(ecr_repo.repository_uri),
+            role=role,
         )
         if cloudwatch_group_already_created:
             log_group = logs.LogGroup.from_log_group_name(
@@ -249,7 +253,23 @@ class DuelingQuibblersStack(Stack):
             iam.PolicyStatement(
                 actions=["bedrock:InvokeModel"],
                 resources=[
-                    f"arn:aws:bedrock:{environment['AWS_REGION']}::foundation-model/*"
+                    f"arn:aws:bedrock:*::foundation-model/*",
+                    f"arn:aws:bedrock:*:*:inference-profile/*",
+                ],
+                effect=iam.Effect.ALLOW,
+            )
+        )
+        self.ecs_role.add_to_policy(
+            iam.PolicyStatement(  # for ecr_deploy.ECRDeployment
+                actions=[
+                    "ecr:InitiateLayerUpload",
+                    "ecr:UploadLayerPart",
+                    "ecr:CompleteLayerUpload",
+                    "ecr:PutImage",
+                ],
+                resources=[
+                    f"arn:aws:ecr:{environment['AWS_REGION']}:*:"
+                    f"repository/{environment['ECR_REPO']}"
                 ],
                 effect=iam.Effect.ALLOW,
             )
@@ -283,5 +303,5 @@ class DuelingQuibblersStack(Stack):
             scope=self,
             construct_id=environment["ECS_SERVICE"],
             environment=environment,
-            role=self.ecs_role,
+            role=self.ecs_role.without_policy_updates(),  # prevent role mutation
         )

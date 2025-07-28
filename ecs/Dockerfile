@@ -10,5 +10,5 @@ COPY utils.py app.py app.py dueling_quibblers_v3.py ./
 
 EXPOSE 8501
 
-# ENTRYPOINT ["streamlit", "run", "app.py"]
-CMD streamlit run app.py
+# CMD streamlit run app.py
+ENTRYPOINT ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]

@@ -6,6 +6,7 @@
       "IAM_ROLE": "dueling-quibblers-role",
       "VPC": "dueling-quibblers-vpc",
       "AVAILABILITY_ZONES": ["b", "c"],
+      "BEDROCK_MODEL": "us.anthropic.claude-3-5-haiku-20241022-v1:0",
       "ECS_CLUSTER": "dueling-quibblers-cluster",
       "ECS_TASK_DEFINITION": "dueling-quibblers-definition",
       "ECS_SERVICE": "dueling-quibblers-service",

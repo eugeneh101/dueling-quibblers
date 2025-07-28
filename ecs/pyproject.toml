@@ -1,35 +1,35 @@
- [tool.poetry]
- name = "dueling-quibblers"
- version = "0.1.0"
- description = "A fun CLI application that creates debates between fantasy characters using LangGraph and AWS Bedrock"
- authors = ["Your Name <your.email@example.com>"]
- readme = "README.md"
- packages = [{include = "dueling_quibblers"}]
- 
- [tool.poetry.dependencies]
- python = "^3.11"
- langgraph = "^0.5.3"
- boto3 = "^1.34.0"
- langchain = "^0.3.26"
- langchain-aws = "^0.2.28"
- pydantic = "^2.11.7"
- typer = "^0.16.0"
- rich = "^14.0.0"
- python-dotenv = "^1.1.1"
- grandalf = "^0.8"
- requests = "^2.32.4"
- streamlit = "^1.47.1"
- ddgs = "^9.4.3"
- 
- [tool.poetry.group.dev.dependencies]
- pytest = "^7.0.0"
- black = "^23.0.0"
- flake8 = "^6.0.0"
- isort = "^5.13.0"
- 
- [build-system]
- requires = ["poetry-core"]
- build-backend = "poetry.core.masonry.api"
- 
- [tool.poetry.scripts]
- dueling-quibblers = "dueling_quibblers:main"
+[tool.poetry]
+name = "dueling-quibblers"
+version = "0.1.0"
+description = "A fun CLI application that creates debates between fantasy characters using LangGraph and AWS Bedrock"
+authors = ["Your Name <your.email@example.com>"]
+packages = [{include = "dueling_quibblers"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+boto3 = "^1.34.0"
+ddgs = "^9.4.3"
+grandalf = "^0.8"
+langchain = "^0.3.26"
+langchain-aws = "^0.2.28"
+langgraph = "^0.5.3"
+pydantic = "^2.11.7"
+requests = "^2.32.4"
+rich = "^14.0.0"
+streamlit = "^1.47.1"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.0.0"
+black = "^23.0.0"
+flake8 = "^6.0.0"
+isort = "^5.13.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+dueling-quibblers = "dueling_quibblers:main"
+
+[packages]
+package-mode = false
