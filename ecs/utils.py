@@ -1,9 +1,12 @@
+from pathlib import Path
+from ddgs import DDGS
 import requests
 import streamlit as st
-from ddgs import DDGS
+from typing import List, Tuple, Optional
+import logging
 
-# Import from local dueling_quibblers_v3.py since we're in the same repo
-from dueling_quibblers_v3 import run_debate_streamlit
+# Import from local dueling_quibblers_v2.py since we're in the same repo
+from dueling_quibblers_v2 import run_debate_streamlit
 
 
 @st.cache_data(show_spinner=False)
@@ -62,43 +65,29 @@ def get_debate_progress(
       - reason: judge's explanation
     """
     debate_progress, _, winner, reason = run_debate_streamlit(
-        topic=topic,
-        debater1=debater1,
-        debater2=debater2,
-        judge=judge,
-        verbose=True,  # hard coded
+        topic, debater1, debater2, judge, verbose=False
     )
     return debate_progress, winner, reason
 
 
-def run_debate(topic: str, debater1: str, debater2: str) -> list[tuple[str, str]]:
+def run_debate(topic: str, debater1: str, debater2: str) -> List[Tuple[str, str]]:
     """
     Run a 3-round debate using advanced logic. Returns a list of (debater1_speech, debater2_speech) tuples.
     """
     debate_progress, debate_log, _, _ = run_debate_streamlit(
-        topic=topic,
-        debater1=debater1,
-        debater2=debater2,
-        judge="Sheldon Cooper",  # take a look
-        verbose=False,  # hard coded
+        topic, debater1, debater2, judge="Sheldon Cooper", verbose=False
     )
     return debate_log
 
 
 def judge_debate(
-    debate_log: list[tuple[str, str]], debater1: str, debater2: str, judge: str
-) -> tuple[str, str]:
+    debate_log: List[Tuple[str, str]], debater1: str, debater2: str, judge: str
+) -> Tuple[str, str]:
     """
     Judge the debate and return (winner, reason) using advanced logic.
     """
     # Re-run the debate to get the winner and reason (since state is not preserved)
     _, _, winner, reason = run_debate_streamlit(
-        topic="",
-        debater1=debater1,
-        debater2=debater2,
-        judge=judge,
-        verbose=False,  # hard coded
+        "", debater1, debater2, judge, verbose=False
     )
     return winner, reason
-
-

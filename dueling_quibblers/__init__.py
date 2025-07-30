@@ -72,6 +72,12 @@ class EcsService(Construct):
             repository_name=environment["ECR_REPO"],
             empty_on_delete=True,
             removal_policy=RemovalPolicy.DESTROY,
+            lifecycle_rules=[
+                ecr.LifecycleRule(
+                    description="Keep only the latest image",
+                    max_image_count=1,
+                )
+            ],
         )
         self.ecs_task_definition = self.ecs_task_definition(
             stack=self,

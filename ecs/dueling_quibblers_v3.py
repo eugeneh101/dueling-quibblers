@@ -5,7 +5,7 @@ Dueling Quibblers - A CLI app for fantasy character debates using LangGraph and 
 import operator
 import os
 import random
-from typing import Annotated, TypedDict
+from typing import Annotated, Literal, TypedDict
 
 from langchain.schema import HumanMessage
 from langchain_aws import ChatBedrock
@@ -35,12 +35,14 @@ class DebateState(TypedDict):
     topic: str
     debater1: str
     debater2: str
-    debater1_position: str  # "affirmative" or "negative"
-    debater2_position: str
+    debater1_position: Literal["affirmative", "negative"]
+    debater2_position: Literal["affirmative", "negative"]
+    current_debater: str | None  # for streamlit
+    current_position: Literal["affirmative", "negative"] | None  # for streamlit
     judge: str
     round_number: int
     debate_history: Annotated[list[dict[str, str | int]], operator.add]
-    judge_verdict: JudgeVerdict
+    judge_verdict: JudgeVerdict  # for streamlit
 
 
 class DebateManager:
@@ -167,7 +169,12 @@ class DebateManager:
                 border_style="blue",
             )
         )
-        return {}
+        return {
+            "round_number": state.get("round_number", 1),  # for streamlit
+            "debate_history": state.get(
+                "debate_history", []
+            ),  # initialize attribute if not already
+        }
 
     def get_character_personality(self, character_name: str) -> dict[str, str]:
         """Get personality template for a character, with fallback for unknown characters"""
@@ -241,6 +248,8 @@ Speak now as {speaker}:"""
             )
         )
         return {
+            "current_debater": state["debater1"],  # for streamlit
+            "current_position": state["debater1_position"],  # for streamlit
             "debate_history": [
                 {
                     "speaker": state["debater1"],
@@ -265,6 +274,8 @@ Speak now as {speaker}:"""
             )
         )
         return {
+            "current_debater": state["debater2"],  # for streamlit
+            "current_position": state["debater2_position"],  # for streamlit
             "debate_history": [
                 {
                     "speaker": state["debater2"],
@@ -280,7 +291,11 @@ Speak now as {speaker}:"""
         console.print(
             f"\n[bold yellow]:arrows_counterclockwise: Round {round_number} begins![/bold yellow]\n"
         )
-        return {"round_number": round_number}
+        return {
+            "current_debater": None,  # not super important
+            "current_position": None,  # not super important
+            "round_number": round_number,
+        }
 
     def end_of_arguments(self, state: DebateState) -> DebateState:
         """End the debate"""
@@ -295,7 +310,7 @@ Speak now as {speaker}:"""
                 border_style="green",
             )
         )
-        return {}
+        return {"current_debater": None}  # not super important
 
     def get_judge_personality(self, judge_name: str) -> dict[str, str]:
         """Get personality template for a judge, with fallback for unknown judges"""
@@ -365,13 +380,12 @@ Deliver your judgment as {state["judge"]}:"""
                 border_style="yellow",
             )
         )
-        return {}
+        return {"judge_verdict": verdict}  # for streamlit
 
-    def create_debate_graph(self) -> StateGraph:
+    def create_debate_graph(self, debate_initialized=False) -> StateGraph:
         """Create the LangGraph for the debate flow"""
         workflow = StateGraph(DebateState)
 
-        workflow.add_node("initialize_debate", self.initialize_debate)
         workflow.add_node("start_debate", self.start_debate)
         workflow.add_node("debater1_speaks", self.debater1_speaks)
         workflow.add_node("debater2_speaks", self.debater2_speaks)
@@ -379,8 +393,13 @@ Deliver your judgment as {state["judge"]}:"""
         workflow.add_node("end_of_arguments", self.end_of_arguments)
         workflow.add_node("judge_verdict", self.judge_verdict)
 
-        workflow.set_entry_point("initialize_debate")
-        workflow.add_edge("initialize_debate", "start_debate")
+        if not debate_initialized:
+            workflow.add_node("initialize_debate", self.initialize_debate)
+            workflow.set_entry_point("initialize_debate")
+            workflow.add_edge("initialize_debate", "start_debate")
+        else:
+            workflow.set_entry_point("start_debate")
+
         workflow.add_edge("start_debate", "debater1_speaks")
         workflow.add_edge("debater1_speaks", "debater2_speaks")
         workflow.add_conditional_edges(
@@ -396,144 +415,11 @@ Deliver your judgment as {state["judge"]}:"""
         return workflow.compile()
 
 
-def run_debate_streamlit(
-    topic: str, debater1: str, debater2: str, judge: str, verbose: bool = False
-):
-    """
-    Run a 3-round debate between debater1 and debater2 on the given topic, judged by judge.
-    Returns (debate_progress, debate_log, winner, reason):
-      - debate_progress: list of dicts with round info, speaker, and arguments for Streamlit display
-      - debate_log: list of (debater1_speech, debater2_speech) for each round
-      - winner: name of the winning debater
-      - reason: judge's explanation
-    """
-    manager = DebateManager()
-    # Randomly assign positions for consistency with CLI
-    positions = ["affirmative", "negative"]
-    random.shuffle(positions)
-    state = {
-        "topic": topic,
-        "debater1": debater1,
-        "debater2": debater2,
-        "debater1_position": positions[0],
-        "debater2_position": positions[1],
-        "judge": judge,
-        "round_number": 1,
-        "debate_history": [],
-    }
-
-    debate_log = []
-    debate_progress = []
-
-    for round_num in range(1, 4):
-        state["round_number"] = round_num
-
-        # Debater 1 speaks
-        if verbose:
-            console.print(
-                f"\n[bold cyan]:microphone: {state['debater1']} speaks (Round {state['round_number']}):[/bold cyan]\n"
-            )
-
-        d1_response = manager.generate_debate_response(
-            state=state, speaker=state["debater1"]
-        )
-
-        if verbose:
-            console.print(
-                Panel(
-                    d1_response,
-                    title=f"{state['debater1']}",
-                    border_style="cyan",
-                    padding=(1, 2),
-                )
-            )
-
-        # Add to progress for Streamlit
-        debate_progress.append(
-            {
-                "round": round_num,
-                "speaker": state["debater1"],
-                "argument": d1_response,
-                "position": state["debater1_position"],
-            }
-        )
-
-        # Debater 2 speaks
-        if verbose:
-            console.print(
-                f"\n[bold magenta]:microphone: {state['debater2']} speaks (Round {state['round_number']}):[/bold magenta]\n"
-            )
-
-        d2_response = manager.generate_debate_response(
-            state=state, speaker=state["debater2"]
-        )
-
-        if verbose:
-            console.print(
-                Panel(
-                    d2_response,
-                    title=f"{state['debater2']}",
-                    border_style="magenta",
-                    padding=(1, 2),
-                )
-            )
-
-        # Add to progress for Streamlit
-        debate_progress.append(
-            {
-                "round": round_num,
-                "speaker": state["debater2"],
-                "argument": d2_response,
-                "position": state["debater2_position"],
-            }
-        )
-
-        # Add to debate history for judge
-        state["debate_history"].extend(
-            [
-                {
-                    "speaker": state["debater1"],
-                    "argument": d1_response,
-                    "round": round_num,
-                },
-                {
-                    "speaker": state["debater2"],
-                    "argument": d2_response,
-                    "round": round_num,
-                },
-            ]
-        )
-
-        debate_log.append((d1_response, d2_response))
-
-    # End of arguments, get judge verdict
-    if verbose:
-        console.print(
-            f"\n[bold yellow]:scales: {state['judge']} delivers the verdict:[/bold yellow]\n"
-        )
-
-    verdict = manager.generate_judgment(state)
-    winner = verdict.debate_winner
-    reason = verdict.debate_winner_explanation
-
-    if verbose:
-        console.print(
-            Panel(
-                verdict.debate_winner_explanation,
-                title=f":scales: {state['judge']}'s Verdict",
-                border_style="yellow",
-                padding=(1, 2),
-            )
-        )
-
-    return debate_progress, debate_log, winner, reason
-
-
 def main():
     """Main application entry point"""
     try:
         debate_manager = DebateManager()
-        debate_graph = debate_manager.create_debate_graph()
+        debate_graph = debate_manager.create_debate_graph(debate_initialized=False)
         debate_graph.invoke({})
     except KeyboardInterrupt:
         console.print("\n[yellow]Debate interrupted by user. Goodbye![/yellow]")
