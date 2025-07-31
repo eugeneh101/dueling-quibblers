@@ -19,14 +19,14 @@ cd ecs/
 
 2. Create Python virtual environment, activate it, and install the dependencies in the virtual environment:
 ```bash
-python -m venv .venv  # assumes you have a Python 3.11+ environment
+python3 -m venv .venv  # assumes you have a Python 3.11+ environment
 source .venv/bin/activate  # if you are on a Mac, it's different if you are on Windows
-python -r requirements.txt
+pip3 install -r requirements.txt
 ```
 
 3a. Run Dueling Quibblers on the command line:
 ```bash
-python dueling_quibblers_v3.py
+python3 dueling_quibblers_v3.py
 ```
 
 3b. Run Dueling Quibblers in a browser with Streamlit frontend:
