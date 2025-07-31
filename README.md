@@ -23,9 +23,6 @@ ollama run llama3.1:8b  # you can type questions to the LLM and it will respond!
 
 2. Copy this repo to your laptop by either using `git clone` (or manually copy all the files to a folder called `dueling-quibblers/`)
 ```bash
-<<<<<<< Updated upstream
-python3 -m venv .venv  # assumes you have a Python 3.11+ environment
-=======
 git clone https://github.com/eugeneh101/dueling-quibblers.git
 ```
 
@@ -36,7 +33,6 @@ python3 -V
 3b. In a new Terminal (keep the previous Terminal running Ollama on), create a Python 3.9+ virtual environment, activate it, and install the dependencies in the virtual environment:
 ```bash
 python3 -m venv .venv  # assumes you have a Python 3.9+ environment
->>>>>>> Stashed changes
 source .venv/bin/activate  # if you are on a Mac, it's different if you are on Windows
 pip3 install -r requirements.txt
 ```
