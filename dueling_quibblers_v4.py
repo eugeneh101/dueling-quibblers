@@ -1,34 +1,23 @@
 #!/usr/bin/env python3
 """
-Dueling Quibblers - A CLI app for fantasy character debates using LangGraph and AWS Bedrock
+Dueling Quibblers - A CLI app for fantasy character debates using LangGraph and Ollama
 """
 import json
 import operator
 import os
 import random
-from typing import Annotated, Literal, TypedDict
+from typing import Annotated, Literal, Optional, TypedDict, Union
 
 from langchain.schema import HumanMessage
-from langchain_aws import ChatBedrock
+from langchain_ollama.llms import OllamaLLM
 from langgraph.graph import END, StateGraph
-from pydantic import BaseModel, Field
 from rich.console import Console
 from rich.panel import Panel
 from rich.prompt import Prompt
 
 AWS_REGION = os.environ.get("AWS_REGION", "us-east-1")
-BEDROCK_MODEL = os.environ.get(
-    "BEDROCK_MODEL", "us.anthropic.claude-3-5-haiku-20241022-v1:0"
-)
 DEBATE_NUM_ROUNDS = json.loads(os.environ.get("DEBATE_NUM_ROUNDS", "3"))
 console = Console()  # Initialize Rich console for beautiful output
-
-
-class JudgeVerdict(BaseModel):
-    debate_winner: str = Field(description="Name of the debater who won the debate")
-    debate_winner_explanation: str = Field(
-        description="A detailed explanation for the judge's verdict"
-    )
 
 
 class DebateState(TypedDict):
@@ -39,19 +28,19 @@ class DebateState(TypedDict):
     debater2: str
     debater1_position: Literal["affirmative", "negative"]
     debater2_position: Literal["affirmative", "negative"]
-    current_debater: str | None  # for streamlit
-    current_position: Literal["affirmative", "negative"] | None  # for streamlit
+    current_debater: Optional[str]  # for streamlit
+    current_position: Optional[Literal["affirmative", "negative"]]  # for streamlit
     judge: str
     round_number: int
-    debate_history: Annotated[list[dict[str, str | int]], operator.add]
-    judge_verdict: JudgeVerdict  # for streamlit
+    debate_history: Annotated[list[dict[str, Union[str, int]]], operator.add]
+    judge_verdict: str  # for streamlit
 
 
 class DebateManager:
     """Manages the debate flow and character interactions"""
 
     def __init__(self):
-        self.llm = ChatBedrock(model_id=BEDROCK_MODEL, region_name=AWS_REGION)
+        self.llm = llm = OllamaLLM(model="llama3.1:8b")  ### can change
         self.character_personalities = {  # Character personality templates
             "harry potter": {
                 "style": "Brave, determined, speaks with conviction about justice and doing what's right. Uses phrases like 'I believe', 'We must', 'It's our duty'.",
@@ -233,7 +222,7 @@ Speak now as {speaker}:"""
         """Generate a debate response for the current speaker"""
         prompt = self.create_debate_prompt(state=state, speaker=speaker)
         response = self.llm.invoke([HumanMessage(content=prompt)])
-        return response.content
+        return response
 
     def debater1_speaks(self, state: DebateState) -> DebateState:
         """Debater 1 presents their argument"""
@@ -352,12 +341,10 @@ As {state["judge"]}, you must now deliver your verdict. You should:
 Deliver your judgment as {state["judge"]}:"""
         return prompt
 
-    def generate_judgment(self, state: DebateState) -> JudgeVerdict:
+    def generate_judgment(self, state: DebateState) -> str:
         """Generate the judge's verdict"""
         prompt = self.create_judgment_prompt(state=state)
-        response = self.llm.with_structured_output(JudgeVerdict).invoke(
-            [HumanMessage(content=prompt)]
-        )
+        response = self.llm.invoke([HumanMessage(content=prompt)])
         return response
 
     def judge_verdict(self, state: DebateState) -> DebateState:
@@ -368,7 +355,7 @@ Deliver your judgment as {state["judge"]}:"""
         verdict = self.generate_judgment(state=state)
         console.print(
             Panel(
-                verdict.debate_winner_explanation,
+                verdict,
                 title=f":scales: {state['judge']}'s Verdict",
                 border_style="yellow",
                 padding=(1, 2),
@@ -376,7 +363,7 @@ Deliver your judgment as {state["judge"]}:"""
         )
         console.print(
             Panel(
-                f"[bold yellow]:trophy: The debate has been judged! The Winner is {verdict.debate_winner}! :trophy:[/bold yellow]\n\n"
+                f"[bold yellow]:trophy: The debate has been judged! :trophy:[/bold yellow]\n\n"
                 f"[italic]Thank you for watching Dueling Quibblers![/italic]",
                 title="Finale",
                 border_style="yellow",

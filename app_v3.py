@@ -4,7 +4,7 @@ import random
 
 import streamlit as st
 
-from dueling_quibblers_v3 import DebateManager, console
+from dueling_quibblers_v4 import DebateManager, console
 from utils_v2 import get_character_image
 
 DEBATE_NUM_ROUNDS = json.loads(os.environ.get("DEBATE_NUM_ROUNDS", "3"))
@@ -107,14 +107,9 @@ if st.button("Start Debate!", type="primary"):
                     with col2:
                         # Create an expandable section for the argument
                         with st.expander(f"View {debater}'s argument", expanded=True):
-                            st.success(
-                                f"🏆 **Winner: {state['judge_verdict'].debate_winner}**"
-                            )
                             with st.container():
                                 st.markdown("### Judge's Explanation")
-                                st.info(
-                                    state["judge_verdict"].debate_winner_explanation
-                                )
+                                st.info(state["judge_verdict"])
             else:
                 raise Exception("Unexpected event: {event}".format(event={node: state}))
     # Final celebration
