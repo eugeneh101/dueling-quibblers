@@ -2,6 +2,7 @@
 """
 Dueling Quibblers - A CLI app for fantasy character debates using LangGraph and AWS Bedrock
 """
+import json
 import operator
 import os
 import random
@@ -19,6 +20,7 @@ AWS_REGION = os.environ.get("AWS_REGION", "us-east-1")
 BEDROCK_MODEL = os.environ.get(
     "BEDROCK_MODEL", "us.anthropic.claude-3-5-haiku-20241022-v1:0"
 )
+DEBATE_NUM_ROUNDS = json.loads(os.environ.get("DEBATE_NUM_ROUNDS", "3"))
 console = Console()  # Initialize Rich console for beautiful output
 
 
@@ -120,7 +122,7 @@ class DebateManager:
             Panel(
                 "[bold blue]:performing_arts: Welcome to Dueling Quibblers! :performing_arts:[/bold blue]\n\n"
                 "Two fantasy characters will engage in a spirited debate.\n"
-                "Each will present 3 arguments in character.",
+                f"Each will present {DEBATE_NUM_ROUNDS} arguments in character.",
                 title="Welcome",
                 border_style="blue",
             )
@@ -210,7 +212,7 @@ class DebateManager:
 Topic: {state["topic"]}
 Your position: {speaker_position}
 Opponent: {opponent} (taking the {opponent_position} position)
-Current round: {state["round_number"]} of 3
+Current round: {state["round_number"]} of {DEBATE_NUM_ROUNDS}
 
 Your speaking style: {personality['style']}
 Your tone: {personality['tone']}
@@ -405,7 +407,9 @@ Deliver your judgment as {state["judge"]}:"""
         workflow.add_conditional_edges(
             "debater2_speaks",
             lambda state: (
-                "advance_round" if state["round_number"] < 3 else "end_of_arguments"
+                "advance_round"
+                if state["round_number"] < DEBATE_NUM_ROUNDS
+                else "end_of_arguments"
             ),
             {"advance_round": "advance_round", "end_of_arguments": "end_of_arguments"},
         )

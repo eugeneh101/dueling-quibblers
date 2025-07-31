@@ -1,3 +1,5 @@
+import json
+import os
 import random
 
 import streamlit as st
@@ -5,6 +7,7 @@ import streamlit as st
 from dueling_quibblers_v3 import DebateManager, console
 from utils_v2 import get_character_image
 
+DEBATE_NUM_ROUNDS = json.loads(os.environ.get("DEBATE_NUM_ROUNDS", "3"))
 console.quiet = True  # deactivate rich, pretty-print to ECS/Cloudwatch logs
 
 st.set_page_config(page_title="Dueling Quibblers", layout="centered")
@@ -13,7 +16,7 @@ st.markdown(
     "Welcome to **Dueling Quibblers**! Enter a debate topic and pick two "
     "fictional characters to battle it out. The characters will be randomly "
     'assigned for ("affirmative") or against ("negative") the motion. '
-    "The judge will decide the winner after 3 rounds!"
+    f"The judge will decide the winner after {DEBATE_NUM_ROUNDS} rounds!"
 )
 
 # --- User Inputs ---
@@ -41,12 +44,15 @@ with col3:
     st.subheader(debater2)
     img2 = get_character_image(name=debater2)
     st.image(img2, width=150)
-st.markdown(f"**Judge:** {judge}")
-if judge.lower() == "random":
-    st.image("pics/mystery_judge.jpg", width=150)  # hard coded
-else:
-    imgj = get_character_image(name=judge)
-    st.image(imgj, width=150)
+_, col2, _ = st.columns(3)
+with col2:
+    st.html("<br>")
+    st.subheader(f"**Judge:** {judge}")
+    if judge.lower() == "random":
+        st.image("pics/mystery_judge.jpg", width=150)  # hard coded
+    else:
+        imgj = get_character_image(name=judge)
+        st.image(imgj, width=150)
 
 # --- Run Debate ---
 if st.button("Start Debate!", type="primary"):

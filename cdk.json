@@ -14,7 +14,8 @@
       "ECS_PORT": 8501,
       "ECS_ENABLE_EXEC": true,
       "ECR_REPO": "dueling-quibblers-repo",
-      "CLOUDWATCH_GROUP_ALREADY_CREATED": true
+      "CLOUDWATCH_GROUP_ALREADY_CREATED": true,
+      "DEBATE_NUM_ROUNDS": 3
     }
   }
 }

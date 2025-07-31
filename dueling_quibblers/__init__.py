@@ -1,3 +1,5 @@
+import json
+
 import cdk_ecr_deployment as ecr_deploy
 from aws_cdk import (
     Duration,
@@ -53,8 +55,11 @@ class EcsService(Construct):
         )
         self.security_group.add_ingress_rule(
             peer=ec2.Peer.any_ipv4(),
-            connection=ec2.Port.tcp(8501),
-            description="Allow inbound TCP traffic from all IP addresses to port 8501",  # hard coded
+            connection=ec2.Port.tcp(environment["ECS_PORT"]),
+            description=(
+                "Allow inbound TCP traffic from all IP addresses "
+                "to Streamlit port (most likely 8501)"
+            ),
         )
 
         self.ecs_cluster = ecs.Cluster(
@@ -88,6 +93,7 @@ class EcsService(Construct):
             role=role,
             env_vars={
                 "AWS_REGION": environment["AWS_REGION"],
+                "DEBATE_NUM_ROUNDS": json.dumps(environment["DEBATE_NUM_ROUNDS"]),
             },
             cloudwatch_group_already_created=environment[
                 "CLOUDWATCH_GROUP_ALREADY_CREATED"
