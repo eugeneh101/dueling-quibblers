@@ -3,6 +3,7 @@ import os
 import random
 
 import streamlit as st
+from PIL import Image
 
 from dueling_quibblers_v3 import DebateManager, console
 from utils_v2 import get_character_image
@@ -91,6 +92,7 @@ if st.button("Start Debate!", type="primary"):
                     col1, col2 = st.columns([1, 4])
                     with col1:
                         st.markdown(f"**{debater}** ({position})")
+                        st.image(img1 if debater == debater1 else img2, width=150)
                     with col2:
                         # Create an expandable section for the argument
                         with st.expander(f"View {debater}'s argument", expanded=True):
@@ -104,6 +106,7 @@ if st.button("Start Debate!", type="primary"):
                     col1, col2 = st.columns([1, 4])
                     with col1:
                         st.markdown(f"**Judge:** {judge.title()}")
+                        st.image(imgj, width=150)
                     with col2:
                         # Create an expandable section for the argument
                         with st.expander("", expanded=True):

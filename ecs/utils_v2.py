@@ -7,7 +7,7 @@ from PIL import Image
 
 
 @st.cache_data(show_spinner=False)
-def get_character_image(name: str) -> str:
+def get_character_image(name: str) -> Image:
     queries = [
         f'"{name}" headshot',
         f'"{name}" character close-up',
@@ -47,13 +47,12 @@ def get_character_image(name: str) -> str:
                         f"image url: {url}", flush=True
                     )  # flush for ECS task -> Cloudwatch logs
                     try:  # sometimes image won't load up correctly
-                        Image.open(BytesIO(response.content))
+                        return Image.open(BytesIO(response.content))
                     except Exception as e:
                         print(
                             f"image url still broken: {url}", flush=True
                         )  # flush for ECS task -> Cloudwatch logs
                         continue
-                    return url
         except Exception as e:
             st.warning(f"DDGS failed on '{q}': {e}")
             raise e
