@@ -106,7 +106,7 @@ if st.button("Start Debate!", type="primary"):
                         st.markdown(f"**Judge:** {judge.title()}")
                     with col2:
                         # Create an expandable section for the argument
-                        with st.expander(f"View {debater}'s argument", expanded=True):
+                        with st.expander("", expanded=True):
                             st.success(
                                 f"🏆 **Winner: {state['judge_verdict'].debate_winner}**"
                             )
