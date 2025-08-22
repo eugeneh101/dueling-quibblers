@@ -9,7 +9,9 @@ RUN pip3 install -r requirements.txt
 COPY app_v2.py utils_v2.py dueling_quibblers_v3.py ./
 COPY pics/ pics/
 
-EXPOSE 8501
+ARG ECS_PORT=80
+ENV ECS_PORT=${ECS_PORT}
+EXPOSE $ECS_PORT
 
-# CMD streamlit run app.py
-ENTRYPOINT ["streamlit", "run", "app_v2.py", "--server.port=8501", "--server.address=0.0.0.0"]
+# CMD streamlit run app_v2.py
+ENTRYPOINT streamlit run app_v2.py --server.port=$ECS_PORT --server.address=0.0.0.0

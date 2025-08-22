@@ -93,6 +93,7 @@ class EcsService(Construct):
             role=role,
             env_vars={
                 "AWS_REGION": environment["AWS_REGION"],
+                "ECS_PORT": json.dumps(environment["ECS_PORT"]),
                 "DEBATE_NUM_ROUNDS": json.dumps(environment["DEBATE_NUM_ROUNDS"]),
             },
             cloudwatch_group_already_created=environment[
