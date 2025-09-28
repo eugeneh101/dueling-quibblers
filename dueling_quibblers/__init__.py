@@ -51,14 +51,20 @@ class EcsService(Construct):
             self,
             "EcsSecurityGroup",
             vpc=self.vpc,
-            allow_all_outbound=True,
+            allow_all_outbound=False,
         )
         self.security_group.add_ingress_rule(
             peer=ec2.Peer.any_ipv4(),
             connection=ec2.Port.tcp(environment["ECS_PORT"]),
             description=(
-                "Allow inbound TCP traffic from all IP addresses "
-                "to Streamlit port (most likely 8501)"
+                "Allow inbound TCP traffic from all IP addresses to Streamlit port"
+            ),
+        )
+        self.security_group.add_egress_rule(
+            peer=ec2.Peer.any_ipv4(),
+            connection=ec2.Port.tcp(443),
+            description=(
+                "Allow outbound TCP traffic for boto3, DDGS, and optionally ECS Exec"
             ),
         )
 
@@ -67,7 +73,8 @@ class EcsService(Construct):
             "EcsCluster",
             cluster_name=environment["ECS_CLUSTER"],
             vpc=self.vpc,
-            container_insights_v2=ecs.ContainerInsights.ENABLED,
+            # container_insights_v2=ecs.ContainerInsights.ENABLED,
+            container_insights_v2=ecs.ContainerInsights.DISABLED,
         )
 
         # connect AWS resources together
@@ -309,6 +316,18 @@ class DuelingQuibblersStack(Stack):
                         f"arn:aws:ecs:{environment['AWS_REGION']}:*:service/"
                         f"{environment['ECS_CLUSTER']}/{environment['ECS_SERVICE']}"
                     ],
+                )
+            )
+        if environment["ECS_ENABLE_EXEC"]:
+            self.ecs_role.add_to_policy(
+                iam.PolicyStatement(
+                    actions=[
+                        "ssmmessages:CreateDataChannel",
+                        "ssmmessages:OpenDataChannel",
+                        "ssmmessages:OpenControlChannel",
+                        "ssmmessages:CreateControlChannel",
+                    ],
+                    resources=["*"],
                 )
             )
 
